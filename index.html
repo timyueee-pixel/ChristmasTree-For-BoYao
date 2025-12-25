@@ -14,7 +14,7 @@
         }
         #canvas-container:active { cursor: grabbing; }
 
-        /* UI Layer - Ensure it passes clicks through, but children catch them */
+        /* UI Layer */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 10; pointer-events: none;
@@ -60,7 +60,6 @@
             font-family: 'Cinzel', serif; font-style: italic;
         }
         
-        /* [V27] 强制提升按钮层级，确保不被阻挡 */
         .open-btn {
             background: transparent; border: none; border-bottom: 1px solid #ffd700;
             color: #ffd700; font-family: 'Cinzel', serif; font-size: 16px; letter-spacing: 4px;
@@ -78,18 +77,17 @@
         }
 
         .upload-wrapper {
-            position: absolute; bottom: 60px; pointer-events: none; /* Wrapper allows click-through */
+            position: absolute; bottom: 60px; pointer-events: none; 
             text-align: center; display: flex; flex-direction: column; align-items: center;
             width: 100%;
             z-index: 20;
         }
         
-        /* [V27] 智能按钮 - 强制接收点击 */
         #action-btn {
             background: rgba(255, 215, 0, 0.1); 
             border: 1px solid rgba(255, 215, 0, 0.4); 
             color: rgba(255, 215, 0, 0.9); 
-            padding: 14px 32px; /* 增大点击区域 */
+            padding: 14px 32px; 
             cursor: pointer; 
             font-family: 'Cinzel', 'STSong', 'SimSun', serif; 
             letter-spacing: 3px; font-size: 14px;
@@ -97,13 +95,11 @@
             backdrop-filter: blur(5px);
             border-radius: 20px;
             min-width: 160px;
-            pointer-events: auto !important; /* [V27] 关键修复 */
+            pointer-events: auto !important; 
             user-select: none;
-            -webkit-tap-highlight-color: transparent; /* 移除手机点击高亮 */
+            -webkit-tap-highlight-color: transparent; 
         }
-        #action-btn:active {
-            transform: scale(0.95); /* 点击反馈 */
-        }
+        #action-btn:active { transform: scale(0.95); }
 
         #action-btn.delete-mode {
             background: rgba(255, 50, 50, 0.25); 
@@ -115,6 +111,27 @@
             color: rgba(255, 215, 0, 0.6); font-size: 12px; margin-top: 15px; letter-spacing: 1px;
             font-family: 'Cinzel', 'STSong', 'SimSun', serif;
             pointer-events: none;
+        }
+
+        /* [V28] 手机端专属优化 (Media Query) */
+        @media (max-width: 768px) {
+            #action-btn {
+                padding: 10px 24px; /* 缩小按钮 */
+                font-size: 12px;    /* 缩小字体 */
+                min-width: 130px;
+                letter-spacing: 2px;
+            }
+            .controls-hint {
+                font-size: 10px;    /* 缩小提示字 */
+                margin-top: 10px;
+                letter-spacing: 0.5px;
+            }
+            .upload-wrapper {
+                bottom: 40px; /* 稍微下移，腾出更多看树空间 */
+            }
+            h1 {
+                margin-top: 15px; /* 标题上移 */
+            }
         }
 
         #file-input { display: none; }
@@ -265,14 +282,14 @@
         let photoMeshGroup = new THREE.Group();
         let caneTexture, snowTexture, glowTexture; 
 
-        // [V27] Start Button Logic
+        // Start Button Logic
         const startBtn = document.getElementById('start-btn');
         startBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Stop unwanted touch behavior
+            e.preventDefault(); 
             startExperience();
         });
         startBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Immediate response for touch
+            e.preventDefault(); 
             startExperience();
         });
 
@@ -762,7 +779,7 @@
             } else if (STATE.mode === 'SCATTER') {
                 STATE.mode = 'TREE';
             }
-            updateInterface(); // Force UI update
+            updateInterface(); 
         }
 
         function handleDoubleClick() {
@@ -772,7 +789,7 @@
                 STATE.mode = 'FOCUS';
                 pickNextSmartPhoto();
             }
-            updateInterface(); // Force UI update
+            updateInterface(); 
         }
 
         function pickNextSmartPhoto() {
@@ -793,6 +810,7 @@
             photos[nextIndex].mesh.userData.needsFlash = true;
         }
 
+        // [V28] Optimized Event Handling & Mobile Fixes
         function setupEvents() {
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
@@ -803,12 +821,14 @@
                 camera.position.z = CONFIG.camera.z;
             });
 
-            // [V27] Updated Button Listener with Touch Support
+            // [V28] Button Handler
             const actionBtn = document.getElementById('action-btn');
             const fileInput = document.getElementById('file-input');
             
-            const handleAction = (e) => {
-                e.preventDefault();
+            // Standard click handler (works for Desktop & Mobile if clean)
+            actionBtn.addEventListener('click', (e) => {
+                // IMPORTANT: Do NOT preventDefault() here if triggering file input
+                // Browsers need trusted event to open file picker
                 e.stopPropagation(); 
                 
                 if(STATE.mode === 'FOCUS') {
@@ -816,13 +836,9 @@
                 } else {
                     fileInput.click();
                 }
-            };
-
-            if(actionBtn && fileInput) {
-                actionBtn.addEventListener('click', handleAction);
-                actionBtn.addEventListener('touchstart', handleAction); // Faster mobile response
-                fileInput.addEventListener('change', handleImageUpload);
-            }
+            });
+            
+            fileInput.addEventListener('change', handleImageUpload);
 
             window.addEventListener('click', (e) => {
                 const audio = document.getElementById('bgm'); 
@@ -835,15 +851,13 @@
         function handleDeletePhoto() {
             if (STATE.mode !== 'FOCUS' || !STATE.focusTarget) return;
 
-            // 1. Immediate UI Feedback
             const targetMesh = STATE.focusTarget;
-            targetMesh.visible = false; // Hide instantly
+            targetMesh.visible = false; 
             
             STATE.mode = 'SCATTER';
             STATE.focusTarget = null;
-            updateInterface(); // Reset button immediately
+            updateInterface(); 
 
-            // 2. Background Process
             setTimeout(() => {
                 const dbId = targetMesh.userData.dbId;
                 const pIndex = particleSystem.findIndex(p => p.mesh === targetMesh);
@@ -904,7 +918,7 @@
                             STATE.focusTarget = newP.mesh;
                             newP.mesh.userData.needsFlash = true;
                             
-                            updateInterface(); // Update button state
+                            updateInterface(); 
                         } catch (err) {
                             console.error(err);
                             alert("保存失败");
@@ -923,32 +937,26 @@
             e.target.value = '';
         }
 
-        // [V27] UI Updater - Called only on events
         function updateInterface() {
             const btn = document.getElementById('action-btn');
             if(!btn) return;
 
-            // Add small delay to allow state to settle
-            setTimeout(() => {
-                if(STATE.mode === 'FOCUS') {
-                    btn.textContent = "移除当前回忆";
-                    btn.classList.add('delete-mode');
-                } else {
-                    btn.textContent = "添加回忆";
-                    btn.classList.remove('delete-mode');
-                }
-            }, 50);
+            if(STATE.mode === 'FOCUS') {
+                btn.textContent = "移除当前回忆";
+                btn.classList.add('delete-mode');
+            } else {
+                btn.textContent = "添加回忆";
+                btn.classList.remove('delete-mode');
+            }
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const dt = clock.getDelta();
 
-            // [V27] Removed updateInterface() from loop for performance
-
             const SENSITIVITY_X = 3; 
-            const SENSITIVITY_Y = 0.8; 
-            const AUTO_SPIN_SPEED = 0.8; 
+            const SENSITIVITY_Y = 0.9; 
+            const AUTO_SPIN_SPEED = 0.75; 
             const EDGE_THRESHOLD = 0.8; 
             
             const mx = STATE.mouse.x;
